@@ -11,6 +11,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 
 app.get("/api/basic", (req, res) => {
     res.json({
@@ -18,6 +19,10 @@ app.get("/api/basic", (req, res) => {
         message: "PixelGear API is working"
     });
 });
+
+const productRoutes = require("./routes/productRoutes");
+
+app.use("/api/products", productRoutes);
 
 async function startServer() {
     try {

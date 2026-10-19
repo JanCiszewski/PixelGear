@@ -1,31 +1,36 @@
 const Product = require("../models/Product");
 const Variant = require("../models/Variants");
 
-const findAllProducts = async (req, res) => {
+const searchProducts = async (req, res) => {
 
     try {
-        const products = await Product.find({});
+        let products;
+        let message;
 
-        if(products.length !== 0) {
+         if(req.query.category) {
+            products = await Product.find({category: req.query.category});
+            message = "Znaleziono produkty z wybranej kategorii";
+            } else {
+                products = await Product.find({});
+                message = "Znaleziono wszystkie produkty";
+            }
+
+            if(products.length === 0) {
+                message = "Nie znaleziono produktów"
+            }
+
             return res.status(200).json({
                 products,
-                message: "Znaleziono wszystkie produkty"
+                message
             })
-        }
-
-        return res.status(200).json({
-            message: "Nie znaleziono produktów"
-        })
 
     } catch(error) {
         return res.status(500).json({
-            products,
             message: "Wystąpił błąd, spróbuj jeszcze raz później"
         })
     }
-    
 }
 
 module.exports = {
-    findAllProducts
+    searchProducts
 }

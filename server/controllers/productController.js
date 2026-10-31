@@ -93,7 +93,34 @@ const createProduct = async (req, res) => {
 }
 
 
+const findProductBySlug = async (req, res) => {
+    try {
+        const slug = req.params.slug;
+        const product = await Product.findOne({slug});
+
+        if(!product) {
+            return res.status(404).json({
+                message: "Produkt nie istnieje"
+            })
+        }
+
+        const variants = await Variant.find({product: product._id})
+
+        return res.status(200).json({
+            product,
+            variants,
+            message: "Znaleziono produkt"
+        })
+    } catch(error) {
+        console.error(error);
+        return res.status(500).json({
+            message: "Wystąpił błąd, spróbuj jeszcze raz później"
+        })
+    }
+}
+
 module.exports = {
     searchProducts,
-    createProduct
+    createProduct,
+    findProductBySlug
 }

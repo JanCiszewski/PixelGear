@@ -2,7 +2,7 @@ const Product = require("../models/Product");
 const Variant = require("../models/Variants");
 const mongoose = require("mongoose");
 
-const searchProducts = async (req, res) => {
+const getProducts = async (req, res) => {
 
     try {
         let products;
@@ -119,8 +119,35 @@ const findProductBySlug = async (req, res) => {
     }
 }
 
+const searchProducts = async (req, res) => {
+    try {
+        if(typeof req.query.q !== "string" || req.query.q.trim().length === 0) {
+            return res.status(400).json({
+                message: "Nie podano prawidłowej frazy wyszukiwania"
+            })
+        }
+
+        const searchQuery = req.query.q.trim();
+        const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const searchParameters = new RegExp(escapedQuery, "i");
+        const products = await Product.find({ $or: [{name: searchParameters}, {brand: searchParameters}]})
+
+        return res.status(200).json({
+            products,
+            message: products.length === 0 ? "Nie znaleziono produktów" : "Znaleziono produkty"
+        })
+
+    }catch(error) {
+        return res.status(500).json({
+            message: "Wystąpił błąd, spróbuj jeszcze raz później"
+        })
+    }
+   
+}
+
 module.exports = {
-    searchProducts,
+    getProducts,
     createProduct,
-    findProductBySlug
+    findProductBySlug,
+    searchProducts
 }

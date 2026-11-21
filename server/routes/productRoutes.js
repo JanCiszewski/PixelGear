@@ -8,5 +8,6 @@ router.post("/", productController.createProduct);
 router.get("/search", productController.searchProducts);
 
 router.get("/:slug", productController.findProductBySlug);
+router.patch("/:id", productController.updateProduct);
 
 module.exports = router;

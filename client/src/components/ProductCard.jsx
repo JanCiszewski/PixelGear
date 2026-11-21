@@ -1,4 +1,4 @@
-function ProductCard ({product}){
+function ProductCard ({product, onSelect}){
     const price = product.variants[0].price; 
 
     const icons = {
@@ -20,6 +20,14 @@ function ProductCard ({product}){
                 <p className="product-price">
                     {price} zł
                 </p>
+
+                <button
+                    type="button"
+                    className="product-open"
+                    onClick={() => onSelect(product)}
+                >
+                    Zobacz szczegóły
+                </button>
             </div>
         </article>
     );

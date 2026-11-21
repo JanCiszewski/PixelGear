@@ -4,6 +4,7 @@
 }
 
 .header {
+  gap: 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -225,4 +226,129 @@ main {
 .category-filters button:hover {
   background-color: #a855f7;
   border-color: #a855f7;
+}
+
+/* WYSZUKIWARKA */
+
+.product-search {
+  width: 100%;
+  max-width: 450px;
+  padding: 15px 20px;
+  margin-bottom: 25px;
+
+  background-color: #252535;
+  color: white;
+  border: 1px solid #353545;
+  border-radius: 10px;
+
+  font-size: 16px;
+  outline: none;
+}
+
+.product-search:focus {
+  border-color: #a855f7;
+}
+
+.product-search::placeholder {
+  color: #888899;
+}
+
+/* karta produktu */
+
+.product-details {
+  padding: 20px 0 60px;
+}
+
+.product-details > button {
+  background: transparent;
+  color: #b3b3c5;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  margin-bottom: 30px;
+}
+
+.product-details > button:hover {
+  color: #a855f7;
+}
+
+.details-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+  align-items: center;
+}
+
+.details-image {
+  min-height: 400px;
+  background: #252535;
+  border: 1px solid #353545;
+  border-radius: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 120px;
+}
+
+.details-info h1 {
+  font-size: 42px;
+  margin-bottom: 25px;
+}
+
+.details-info h2 {
+  color: #a855f7;
+  font-size: 36px;
+  margin: 25px 0;
+}
+
+.details-info p {
+  color: #b3b3c5;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+  .details-layout {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+
+  .details-image {
+    min-height: 280px;
+    font-size: 90px;
+  }
+
+  .details-info h1 {
+    font-size: 30px;
+  }
+}
+
+/* PRZYCISK SZCZEGOLOW PRODUKTU */
+
+.product-open {
+  display: block;
+  width: 100%;
+  padding: 13px 18px;
+  margin-top: 20px;
+
+  background-color: #a855f7;
+  color: #ffffff;
+
+  border: none;
+  border-radius: 8px;
+
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.product-open:hover {
+  background-color: #9333ea;
+  transform: translateY(-2px);
 }

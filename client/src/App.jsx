@@ -2,14 +2,26 @@ import './App.css';
 import ProductCard from './components/ProductCard';
 import { products } from './data/products';
 import { useState } from 'react';
+import ProductDetails from './components/ProductDetails';
 
 
 function App() {
-  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const filteredProducts = selectedCategory === 'all'
-  ? products
-  : products.filter((product) => product.category === selectedCategory)
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory = 
+      selectedCategory === "all" ||
+      product.category === selectedCategory;
+
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
+    return matchesCategory && matchesSearch;
+  });
+  
 
   return(
     <div className="app">
@@ -19,12 +31,22 @@ function App() {
         </a>
 
         <nav className="navigation">
+          <a href="#wyszukiwarka" className="search-link" aria-label="Przejdź do wyszukiwarki">
+            SZUKAJ...
+          </a>
           <a href ="#produkty"> PRODUKTY </a>
           <a href ="#kategorie"> KATEGORIE </a>
         </nav>
       </header>
 
       <main>
+        {selectedProduct ? (
+          <ProductDetails
+            product={selectedProduct}
+            onBack={() => setSelectedProduct(null)}
+          />
+        ) : (
+          <>
         <section className="hero">
           <div className="hero-content">
             <p className="hero-label">
@@ -49,6 +71,15 @@ function App() {
         </section>
         <section id="produkty" className="products-section">
           <h2>Nasze produkty</h2>
+
+          <input
+            id="wyszukiwarka"
+            type="search"
+            className="product-search"
+            placeholder="Szukaj produktu..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
 
           <div id="kategorie" className="category-filters">
 
@@ -78,10 +109,16 @@ function App() {
               <ProductCard
                 key={product._id}
                 product={product}
+                onSelect={(product) => {
+                  setSelectedProduct(product);
+                  window.scrollTo(0, 0);
+                }}
               />
             )) }
           </div>
         </section>
+          </>
+        )}
       </main>
     </div>
   );

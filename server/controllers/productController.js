@@ -5,25 +5,52 @@ const mongoose = require("mongoose");
 const getProducts = async (req, res) => {
 
     try {
-        let products;
         let message;
+        const page = Number(req.query.page ?? 1);
+        const limit = Number(req.query.limit ?? 12);
+        const filter = req.query.category ? {category: req.query.category} : {};
 
-         if(req.query.category) {
-            products = await Product.find({category: req.query.category});
+        if(!Number.isInteger(page) || page <= 0 ) {
+            return res.status(400).json({
+                message: "Nieprawidłowy numer strony"
+            })
+        }
+
+        if(!Number.isInteger(limit) || limit <= 0 || limit > 50) {
+            return res.status(400).json({
+                message: "Nieprawidłowy limit produktów"
+            })
+        }
+        
+        const skip = limit * (page - 1);
+        const totalProducts = await Product.countDocuments(filter);
+        const totalPages = Math.ceil(totalProducts/limit);
+
+        if(page > totalPages && totalPages !== 0) {
+            return res.status(400).json({
+                message: "Podana strona nie istnieje"
+            })
+        }
+
+        const products = await Product.find(filter).skip(skip).limit(limit);
+
+        if(req.query.category) {
             message = "Znaleziono produkty z wybranej kategorii";
             } else {
-                products = await Product.find({});
                 message = "Znaleziono wszystkie produkty";
             }
 
-            if(products.length === 0) {
-                message = "Nie znaleziono produktów"
-            }
+        if(products.length === 0) {
+            message = "Nie znaleziono produktów"
+        }
 
-            return res.status(200).json({
-                products,
-                message
-            })
+        return res.status(200).json({
+            products,
+            totalProducts,
+            totalPages,
+            currentPage: page,
+            message
+        })
 
     } catch(error) {
         return res.status(500).json({
@@ -145,9 +172,75 @@ const searchProducts = async (req, res) => {
    
 }
 
+const updateProduct = async (req, res) => {
+    let session;
+    try {
+        session = await mongoose.startSession();
+        const productId = req.params.id;
+        const {product, updateVariants, newVariants} = req.body;
+
+        if(!product && (!updateVariants || updateVariants.length === 0) && (!newVariants || newVariants.length === 0)) {
+            return res.status(400).json({
+                message: "Nie podano danych do edycji"
+            })
+        }
+
+        const existingProduct = await Product.findOne({_id: productId})
+        if(!existingProduct) {
+            return res.status(404).json({
+                message: "Produkt nie istnieje"
+            })
+        }
+
+        // const existingVariants = await Variant.find({product: existingProduct.id})
+
+        await session.withTransaction( async (session) => {
+            if(product && Object.keys(product).length > 0) {
+                const updatedProduct = await Product.findByIdAndUpdate(productId, {$set: product}, {session, runValidators: true, new: true});
+                if (!updatedProduct) {
+                    return res.status(404).json({
+                        message: "Nie znaleziono produktu"
+                    })
+                }    
+            }
+
+
+            await Promise.all(updateVariants.map( async (variant) => {
+                const updatedVariant = await Variant.findOneAndUpdate({_id: variant.id, product: productId}, {$set: variant}, {session, runValidators: true, new: true})
+                if(!updatedVariant) {
+                    return res.status(404).json({
+                        message: "Nie znaleziono wariantu"
+                    })
+                }
+                return updatedVariant;
+            }));
+
+
+            // if(isArray(updateVariants) && updateVariants.length !== 0) {
+            //     const updatedVariant = await Variant.findAndUpdate(productId, {$set: product}, {session, runValidators: true, new: true});
+            //     if (!updatedProduct) {
+            //         return res.status(404).json({
+            //             message: "Nie znaleziono produktu"
+            //         })
+            //     }
+            // }
+        })
+
+    } catch(error) {
+        return res.status(500).json({
+            message: "Wystąpił błąd, spróbuj jeszcze raz później"
+        })
+    } finally {
+        if(session) {
+            await session.endSession();
+        }
+    }
+}
+
 module.exports = {
     getProducts,
     createProduct,
     findProductBySlug,
-    searchProducts
+    searchProducts,
+    updateProduct
 }

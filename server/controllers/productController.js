@@ -72,7 +72,7 @@ const createProduct = async (req, res) => {
         })
         }
 
-        if(existingProduct.length !== 0) {
+        if(existingProduct) {
             return res.status(400).json({
             message: "Produkt już istnieje"
         })
@@ -104,6 +104,7 @@ const createProduct = async (req, res) => {
 
         return res.status(201).json({
             product,
+            productVariants,
             message: "Produkt został dodany pomyślnie"
         })
 
@@ -139,7 +140,6 @@ const findProductBySlug = async (req, res) => {
             message: "Znaleziono produkt"
         })
     } catch(error) {
-        console.error(error);
         return res.status(500).json({
             message: "Wystąpił błąd, spróbuj jeszcze raz później"
         })
@@ -179,54 +179,84 @@ const updateProduct = async (req, res) => {
         const productId = req.params.id;
         const {product, updateVariants, newVariants} = req.body;
 
-        if(!product && (!updateVariants || updateVariants.length === 0) && (!newVariants || newVariants.length === 0)) {
+        let updatedProduct = null;
+        let updatedVariants = [];
+        let createdVariants = [];
+
+        if (Array.isArray(product) || (product !== undefined && typeof product !== "object")) {
+            return res.status(400).json({
+                message: "Podano błędne dane do edycji"
+            })
+        }
+
+        if((!Array.isArray(updateVariants) && updateVariants !== undefined) || (!Array.isArray(newVariants) && newVariants !== undefined)) {
+            return res.status(400).json({
+                message: "Podano błędne dane do edycji"
+            })
+        }
+
+        if((!product || Object.keys(product).length === 0) && (!updateVariants || updateVariants.length === 0) && (!newVariants || newVariants.length === 0)) {
             return res.status(400).json({
                 message: "Nie podano danych do edycji"
             })
         }
-
+        
         const existingProduct = await Product.findOne({_id: productId})
         if(!existingProduct) {
             return res.status(404).json({
-                message: "Produkt nie istnieje"
-            })
+                        message: "Nie znaleziono produktu"
+                    })
         }
-
-        // const existingVariants = await Variant.find({product: existingProduct.id})
 
         await session.withTransaction( async (session) => {
             if(product && Object.keys(product).length > 0) {
-                const updatedProduct = await Product.findByIdAndUpdate(productId, {$set: product}, {session, runValidators: true, new: true});
+                updatedProduct = await Product.findByIdAndUpdate(productId, {$set: product}, {session, runValidators: true, returnDocument: "after"});
                 if (!updatedProduct) {
-                    return res.status(404).json({
-                        message: "Nie znaleziono produktu"
-                    })
+                    const error = new Error("Nie znaleziono produktu");
+                    error.code = "PRODUCTS_NOT_FOUND"
+                    throw error;
                 }    
             }
-
-
-            await Promise.all(updateVariants.map( async (variant) => {
-                const updatedVariant = await Variant.findOneAndUpdate({_id: variant.id, product: productId}, {$set: variant}, {session, runValidators: true, new: true})
-                if(!updatedVariant) {
-                    return res.status(404).json({
-                        message: "Nie znaleziono wariantu"
-                    })
+            if (Array.isArray(updateVariants) && updateVariants.length > 0) {
+                for (const variant of updateVariants) {
+                    const {id, ...variantData} = variant;
+                    const updatedVariant = await Variant.findOneAndUpdate({_id: id, product: productId}, {$set: variantData}, {session, runValidators: true, returnDocument: "after"})
+                    if(!updatedVariant) {
+                        const error = new Error("Nie znaleziono wariantów");
+                        error.code = "VARIANTS_NOT_FOUND"
+                        throw error;
+                     }
+                    updatedVariants.push(updatedVariant); 
                 }
-                return updatedVariant;
-            }));
+            }
 
-
-            // if(isArray(updateVariants) && updateVariants.length !== 0) {
-            //     const updatedVariant = await Variant.findAndUpdate(productId, {$set: product}, {session, runValidators: true, new: true});
-            //     if (!updatedProduct) {
-            //         return res.status(404).json({
-            //             message: "Nie znaleziono produktu"
-            //         })
-            //     }
-            // }
+            if(Array.isArray(newVariants) && newVariants.length > 0) {
+                createdVariants = newVariants.map( (variant) => new Variant({
+                    ...variant,
+                    product: existingProduct._id
+                }))
+                await Variant.insertMany(createdVariants, {session});
+            }
         })
 
+        return res.status(200).json({
+                updatedProduct,
+                updatedVariants,
+                createdVariants,
+                message: "Pomyślnie zaktualizano produkt oraz jego warianty"
+            })
+
     } catch(error) {
+        if(error.name === "ValidationError" || error.name === "CastError") {
+            return res.status(400).json({
+            message: "Błąd walidacji"
+        })
+        }
+        if(error.code === "VARIANTS_NOT_FOUND" || error.code === "PRODUCTS_NOT_FOUND"){
+            return res.status(404).json({
+                    message: error.message
+                })
+        }
         return res.status(500).json({
             message: "Wystąpił błąd, spróbuj jeszcze raz później"
         })

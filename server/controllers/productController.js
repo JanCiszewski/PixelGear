@@ -267,10 +267,66 @@ const updateProduct = async (req, res) => {
     }
 }
 
+const deleteProduct = async (req, res) => {
+    let session;
+    try {
+        session = await mongoose.startSession();
+        const productId = req.params.id;
+
+        if(!productId || !mongoose.isValidObjectId(productId)) {
+            return res.status(400).json({
+                message: "Błędne id produktu"
+            })
+        }
+
+        await session.withTransaction( async (session) => {
+            const existingProduct = await Product.findById(productId);
+            if(!existingProduct) {
+                const error = new Error("Nie znaleziono produktu");
+                error.code = "PRODUCT_NOT_FOUND";
+                throw error;
+            }
+
+            await Product.findByIdAndDelete(productId, {session})
+            await Variant.deleteMany({product: productId}, {session})
+                
+            })
+
+        return res.status(200).json({
+            message: "Pomyślnie usunięto produkt wraz z jego wariantami"
+        })
+        
+
+    } catch(error) {
+        if(error.name === "ValidationError" || error.name === "CastError") {
+            return res.status(400).json({
+                message: "Błąd walidacji"
+            })
+        }
+
+        if(error.code === "PRODUCT_NOT_FOUND"){
+            return res.status(404).json({
+                message: "Nie znaleziono produktu"
+            })
+        }
+
+        return res.status(500).json({
+            message: "Wystąpił błąd, spróbuj jeszcze raz później"
+        })
+    } finally {
+        if(session) {
+            await session.endSession();
+        }
+    }
+    
+
+}
+
 module.exports = {
     getProducts,
     createProduct,
     findProductBySlug,
     searchProducts,
-    updateProduct
+    updateProduct,
+    deleteProduct
 }
